@@ -12,6 +12,8 @@ from utils import load_part_of_model
 from PIL import Image
 import numpy as np
 from matplotlib import pyplot as plt
+import math
+from skimage.measure import compare_psnr, compare_ssim
 
 def toTensor(picA, picB, picC):
     pics = [picA, picB, picC]
@@ -50,33 +52,73 @@ def test():
     model.load_state_dict(torch.load('model/checkpoint_2018-11-28 11:17:30/model_epoch_15.pth'))
     model.eval()
     # model = load_part_of_model(model, 'checkpoint/model_epoch_5.pth')
-    size = 250
+    size = 200
+    psnr_total = []
+    ssim_total = []
     for name in image_names:
         left_high = Image.open(os.path.join(left_high_root, name + '0.jpg'))
         right_low = Image.open(os.path.join(right_low_root, name + '1.jpg'))
         gt = Image.open(os.path.join(gt_root, name + '1.png'))
-        left_high = left_high.crop((0, 0, size, size))
-        right_low = right_low.crop((0, 0, size, size))
-        gt = gt.crop((0, 0, size, size))
+        # left_high = left_high.crop((0, 0, size, size))
+        # right_low = right_low.crop((0, 0, size, size))
+        # gt = gt.crop((0, 0, size, size))
+        w, h = gt.size
+        iter_w = math.ceil(w / size)
+        iter_h = math.ceil(h / size)
+        crop_w = size
+        crop_h = size
+        count = 0
+        psnr_img = []
+        ssim_img = []
+        for i in range(iter_w):
+            if i == iter_w - 1:
+                crop_w = w - i * size
+            for j in range(iter_h):
+                if j == iter_h - 1:
+                    crop_h = h - j * size
 
-        input1, input2, target = toTensor(right_low, left_high, gt)
-        input1 = input1.unsqueeze(0)
-        input1 = input1.type(torch.cuda.FloatTensor)
-        input2 = input2.unsqueeze(0)
-        input2 = input2.type(torch.cuda.FloatTensor)
-        result = model(input1, input2)
-        result = result.data.cpu().numpy()
-        # result = result * 255
-        # result = result.astype(np.uint8)
-        target = target.data.cpu().numpy()
-        input1 = input1.data.cpu().numpy()
-        plt.subplot(1, 3, 1)
-        plt.imshow(result[0, 0, :, :])
-        plt.subplot(1, 3, 2)
-        plt.imshow(target[0, :, :])
-        plt.subplot(1, 3, 3)
-        plt.imshow(input1[0, 0, :, :])
-        plt.show()
+                crop_high = left_high.crop((i * 200, j * 200, i * 200 + crop_w,  j * 200 + crop_h))
+                crop_low = right_low.crop((i * 200, j * 200, i * 200 + crop_w, j * 200 + crop_h))
+                crop_gt = gt.crop((i * 200, j * 200, i * 200 + crop_w, j * 200 + crop_h))
+                # crop_high.save('Dataset05/' + str(count) + '.jpg')
+                count += 1
+                print('(' + str(i*200) + ',' + str(j*200) + ')')
+
+                input1, input2, target = toTensor(crop_low, crop_high, crop_gt)
+                input1 = input1.unsqueeze(0)
+                input1 = input1.type(torch.cuda.FloatTensor)
+                input2 = input2.unsqueeze(0)
+                input2 = input2.type(torch.cuda.FloatTensor)
+                result = model(input1, input2)
+                result = result.data.cpu().numpy()
+                # result = result * 255
+                # result = result.astype(np.uint8)
+                target = target.data.cpu().numpy()
+                # input1 = input1.data.cpu().numpy()
+                # plt.subplot(1, 3, 1)
+                # plt.imshow(result[0, 0, :, :])
+                # plt.subplot(1, 3, 2)
+                # plt.imshow(target[0, :, :])
+                # plt.subplot(1, 3, 3)
+                # plt.imshow(input1[0, 0, :, :])
+                # plt.show()
+                psnr = compare_psnr(target[0, :, :], result[0, 0, :, :])
+                ssim = compare_ssim(result[0, 0, :, :], target[0, :, :])
+                psnr_img.append(psnr)
+                ssim_img.append(ssim)
+
+        psnr_img_mean = np.mean(psnr_img)
+        ssim_img_mean = np.mean(ssim_img)
+
+        psnr_total.append(psnr_img_mean)
+        ssim_total.append(ssim_img_mean)
+
+    final_psnr = np.mean(psnr_total)
+    final_ssim = np.mean(ssim_total)
+
+    print('psnr:', final_psnr)
+    print('ssim:', final_ssim)
+
 
 
 def save_checkpoint(model, epoch, time):

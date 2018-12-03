@@ -38,13 +38,41 @@ class SRNet(nn.Module):
 
         self.conv_input = nn.Conv2d(in_channels=1, out_channels=256, kernel_size=3, stride=1, padding=1, bias=False)
 
-        self.residual = self.make_layer(_Residual_Block, 32)
+        self.residual = self.make_layer(_Residual_Block, 16)
 
         self.conv_mid = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1, bias=False)
 
-        self.conv_output = nn.Conv2d(in_channels=256, out_channels=1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv_output = nn.Conv2d(in_channels=256, out_channels=16, kernel_size=3, stride=1, padding=1, bias=False)
 
-        self.fuse = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=1)
+        # self.fuse = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=1)
+
+        # conv-lstm
+        self.conv_i = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+        self.conv_f = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+        self.conv_g = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Tanh()
+        )
+
+        self.conv_o = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+        self.conv_lstm_output = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=1, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -80,6 +108,21 @@ class SRNet(nn.Module):
         # out = self.upscale4x(out)
         out2 = self.conv_output(out2)
 
-        final = self.fuse(torch.cat([out, out2], 1))
-        # out = self.add_mean(out)
-        return final
+        lstm_input = torch.cat([out, out2], 1)
+
+        h = torch.zeros(x.size(0), 32, x.size(2), x.size(3)).type(torch.cuda.FloatTensor)
+        c = torch.zeros(x.size(0), 32, x.size(2), x.size(3)).type(torch.cuda.FloatTensor)
+        lstm_seq = []
+        for i in range(4):
+            z = torch.cat([lstm_input, h], 1)
+            i = self.conv_i(z)
+            f = self.conv_f(z)
+            g = self.conv_g(z)
+            o = self.conv_o(z)
+            c = f * c + i * g
+            h = o * F.tanh(c)
+            output_lstm = self.conv_lstm_output(h)
+            lstm_seq.append(output_lstm)
+
+
+        return lstm_seq[len(lstm_seq) - 1]
