@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models import SRNet
-from edsr import Net
+from models import SRNet, DINetwok
 import os
 import time
 from H5FileDataLoader import DatasetFromHdf5
@@ -12,14 +11,22 @@ from utils import load_part_of_model
 
 def adjust_learning_rate(optimizer, epoch, param):
     """Sets the learning rate to the initial LR decayed by 10"""
-    lr = param['lr'] * (0.1 ** (epoch // 200))
+    if param['max_epoch'] >= epoch:
+        scale_running_lr = 1.0
+    else:
+        scale_running_lr = ((1. - float(epoch) / param['max_epoch']) ** param['lr_pow'])
+    param['running_lr'] = param['lr'] * scale_running_lr
+
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group['lr'] = param['running_lr']
 
 def train(epochs):
     device = torch.device('cuda')
     param = {}
     param['lr'] = 0.0001
+    param['max_epoch'] = 30
+    param['lr_pow'] = 0.9
+    param['running_lr'] = param['lr']
 
     train_file = 'Dataset05/train_file.txt'
     gt_root = 'Dataset05/training_aug/groundtruth'
@@ -29,7 +36,8 @@ def train(epochs):
     image_names = [line.strip() for line in list_file]
 
     crit = nn.L1Loss()
-    model = SRNet().to(device)
+    # model = SRNet().to(device)
+    model = DINetwok().to(device)
     # model.load_state_dict(torch.load('model/2018-10-26 22:11:34/50000/snap_model.pth'))
     # model = load_part_of_model_PSP_LSTM(model, param['pretrained_model'])
     # model.load_state_dict(torch.load(param['pretrained_model']))
@@ -40,7 +48,7 @@ def train(epochs):
 
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
-                                 transforms.RandomCrop(100),
+                                 transforms.RandomCrop(270),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),

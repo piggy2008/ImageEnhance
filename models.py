@@ -126,3 +126,122 @@ class SRNet(nn.Module):
 
 
         return lstm_seq[len(lstm_seq) - 1]
+
+class _DIN_block(nn.Module):
+    def __init__(self):
+        super(_DIN_block, self).__init__()
+
+        self.conv1_1 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1)
+        self.conv1_2 = nn.Conv2d(in_channels=48, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.conv1_3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+
+        self.conv2_1 = nn.Conv2d(in_channels=48, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.conv2_2 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1)
+        self.conv2_3 = nn.Conv2d(in_channels=48, out_channels=80, kernel_size=3, stride=1, padding=1)
+
+    def forward(self, x):
+        identity_data = x
+
+        x = F.leaky_relu(self.conv1_1(x), negative_slope=0.05)
+        x = F.leaky_relu(self.conv1_2(x), negative_slope=0.05)
+        x = F.leaky_relu(self.conv1_3(x), negative_slope=0.05)
+        slice1 = x.narrow(1, 0, 16)
+        slice2 = x.narrow(1, 16, 48)
+
+        x = F.leaky_relu(self.conv2_1(slice2), negative_slope=0.05)
+        x = F.leaky_relu(self.conv2_2(x), negative_slope=0.05)
+        x = F.leaky_relu(self.conv2_3(x), negative_slope=0.05)
+
+        output = torch.add(torch.cat([identity_data, slice1], dim=1), x)
+
+        return output
+
+class DINetwok(nn.Module):
+    def __init__(self):
+        super(DINetwok, self).__init__()
+
+        # low part
+        self.low_conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.low_conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+
+        self.low_block1 = nn.Sequential(_DIN_block())
+        self.low_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
+
+        self.low_block2 = nn.Sequential(_DIN_block())
+        self.low_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+
+        # high part
+        self.high_conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.high_conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+
+        self.high_block1 = nn.Sequential(_DIN_block())
+        self.high_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
+
+        self.high_block2 = nn.Sequential(_DIN_block())
+        self.high_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+
+        # conv-lstm
+        self.conv_i = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+        self.conv_f = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+        self.conv_g = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Tanh()
+        )
+
+        self.conv_o = nn.Sequential(
+            nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+        self.conv_lstm_output = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=1, kernel_size=3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, low, high):
+        low = F.leaky_relu(self.low_conv1(low), negative_slope=0.05)
+        low = F.leaky_relu(self.low_conv2(low), negative_slope=0.05)
+        low = self.low_block1(low)
+        low = F.leaky_relu(self.low_down1(low), negative_slope=0.05)
+        low = self.low_block2(low)
+        low = F.leaky_relu(self.low_down2(low), negative_slope=0.05)
+
+        high = F.leaky_relu(self.high_conv1(high), negative_slope=0.05)
+        high = F.leaky_relu(self.high_conv2(high), negative_slope=0.05)
+        high = self.high_block1(high)
+        high = F.leaky_relu(self.high_down1(high), negative_slope=0.05)
+        high = self.high_block2(high)
+        high = F.leaky_relu(self.high_down2(high), negative_slope=0.05)
+
+        lstm_input = torch.cat([low, high], 1)
+
+        h = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
+        c = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
+        lstm_seq = []
+        for i in range(4):
+            z = torch.cat([lstm_input, h], 1)
+            i = self.conv_i(z)
+            f = self.conv_f(z)
+            g = self.conv_g(z)
+            o = self.conv_o(z)
+            c = f * c + i * g
+            h = o * F.tanh(c)
+            output_lstm = self.conv_lstm_output(h)
+            lstm_seq.append(output_lstm)
+
+        return lstm_seq[len(lstm_seq) - 1]
+
+if __name__ == '__main__':
+    device = torch.device('cuda')
+    model = DINetwok().to(device)
+    input = torch.zeros([8, 1, 100, 100]).type(torch.cuda.FloatTensor)
+    input2 = torch.zeros([8, 1, 100, 100]).type(torch.cuda.FloatTensor)
+    output = model(input, input2)

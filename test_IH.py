@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models import SRNet
+from models import SRNet, DINetwok
 from edsr import Net
 import os
 import time
@@ -48,8 +48,9 @@ def test():
     image_names = [line.strip() for line in list_file]
 
 
-    model = SRNet().to(device)
-    model.load_state_dict(torch.load('model/checkpoint_2018-11-28 11:17:30/model_epoch_15.pth'))
+    # model = SRNet().to(device)
+    model = DINetwok().to(device)
+    model.load_state_dict(torch.load('model/checkpoint_2018-12-04 15:44:16/model_epoch_50.pth'))
     model.eval()
     # model = load_part_of_model(model, 'checkpoint/model_epoch_5.pth')
     size = 200
