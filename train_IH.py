@@ -14,7 +14,7 @@ def adjust_learning_rate(optimizer, epoch, param):
     if param['max_epoch'] >= epoch:
         scale_running_lr = 1.0
     else:
-        scale_running_lr = ((1. - float(epoch) / param['max_epoch']) ** param['lr_pow'])
+        scale_running_lr = ((1. - float(epoch) / param['total_epoch']) ** param['lr_pow'])
     param['running_lr'] = param['lr'] * scale_running_lr
 
     for param_group in optimizer.param_groups:
@@ -23,9 +23,10 @@ def adjust_learning_rate(optimizer, epoch, param):
 def train(epochs):
     device = torch.device('cuda')
     param = {}
-    param['lr'] = 0.0001
-    param['max_epoch'] = 30
-    param['lr_pow'] = 0.9
+    param['lr'] = 0.001
+    param['max_epoch'] = 60
+    param['total_epoch'] = epochs
+    param['lr_pow'] = 0.95
     param['running_lr'] = param['lr']
 
     train_file = 'Dataset05/train_file.txt'
@@ -48,19 +49,19 @@ def train(epochs):
 
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
-                                 transforms.RandomCrop(270),
+                                 transforms.RandomCrop(220),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
                                  transforms.ToTensor()]))
 
     training_data_loader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=8,
+                                             batch_size=12,
                                              shuffle=True,
                                              num_workers=int(1))
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
-    for epoch in range(epochs + 1):
+    for epoch in range(1, epochs + 1):
         for iteration, (low, high, target) in enumerate(training_data_loader):
             low = low.type(torch.cuda.FloatTensor)
             high = high.type(torch.cuda.FloatTensor)
@@ -75,12 +76,12 @@ def train(epochs):
             optimizer.step()
 
             if iteration % 2 == 0:
-                print("===> Epoch[{}]({}/{}): Loss: {:.10f}".format(epoch, iteration, len(training_data_loader), loss.data[0]))
-        # adjust_learning_rate(optimizer, epoch - 1, param)
+                print("===> Epoch[{}]({}/{}): Loss: {:.10f}; lr:{:.10f}".format(epoch, iteration, len(training_data_loader), loss.data[0], param['running_lr']))
+            adjust_learning_rate(optimizer, epoch, param)
 
         print("Epochs={}, lr={}".format(epoch, optimizer.param_groups[0]["lr"]))
 
-        if epoch % 10 == 0:
+        if epoch % 20 == 0:
             save_checkpoint(model, epoch, time_str)
 
 
@@ -97,6 +98,6 @@ def save_checkpoint(model, epoch, time):
     print("Checkpoint saved to {}".format(model_out_path))
 
 if __name__ == '__main__':
-    total_epochs = 50
+    total_epochs = 100
     # data_path = '/home/ty/code/pytorch-edsr/data/edsr_x4.h5'
     train(total_epochs)

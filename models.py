@@ -132,12 +132,23 @@ class _DIN_block(nn.Module):
         super(_DIN_block, self).__init__()
 
         self.conv1_1 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1)
-        self.conv1_2 = nn.Conv2d(in_channels=48, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.conv1_2 = nn.Conv2d(in_channels=48, out_channels=32, kernel_size=3, stride=1, padding=1, groups=4)
         self.conv1_3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
 
         self.conv2_1 = nn.Conv2d(in_channels=48, out_channels=64, kernel_size=3, stride=1, padding=1)
-        self.conv2_2 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1)
+        self.conv2_2 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1, groups=4)
         self.conv2_3 = nn.Conv2d(in_channels=48, out_channels=80, kernel_size=3, stride=1, padding=1)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                if m.bias is not None:
+                    m.bias.data.zero_()
 
     def forward(self, x):
         identity_data = x
@@ -156,6 +167,25 @@ class _DIN_block(nn.Module):
 
         return output
 
+class attentionBlock(nn.Module):
+    def __init__(self, in_channel, reduction=64):
+        super(attentionBlock, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(in_channel, in_channel // reduction),
+            nn.ReLU(inplace=True),
+            nn.Linear(in_channel // reduction, in_channel),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x)
+        y = y.view(b, c)
+        y = self.fc(y)
+        y = y.view(b, c, 1, 1)
+        return x * y
+
 class DINetwok(nn.Module):
     def __init__(self):
         super(DINetwok, self).__init__()
@@ -167,6 +197,8 @@ class DINetwok(nn.Module):
         self.low_block1 = nn.Sequential(_DIN_block())
         self.low_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
+        self.low_channel_wise = attentionBlock(64, 16)
+
         self.low_block2 = nn.Sequential(_DIN_block())
         self.low_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
 
@@ -176,6 +208,8 @@ class DINetwok(nn.Module):
 
         self.high_block1 = nn.Sequential(_DIN_block())
         self.high_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
+
+        self.high_channel_wise = attentionBlock(64, 16)
 
         self.high_block2 = nn.Sequential(_DIN_block())
         self.high_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
@@ -206,11 +240,25 @@ class DINetwok(nn.Module):
             nn.Sigmoid()
         )
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+
     def forward(self, low, high):
         low = F.leaky_relu(self.low_conv1(low), negative_slope=0.05)
         low = F.leaky_relu(self.low_conv2(low), negative_slope=0.05)
         low = self.low_block1(low)
         low = F.leaky_relu(self.low_down1(low), negative_slope=0.05)
+
+        low = self.low_channel_wise(low)
+
         low = self.low_block2(low)
         low = F.leaky_relu(self.low_down2(low), negative_slope=0.05)
 
@@ -218,6 +266,9 @@ class DINetwok(nn.Module):
         high = F.leaky_relu(self.high_conv2(high), negative_slope=0.05)
         high = self.high_block1(high)
         high = F.leaky_relu(self.high_down1(high), negative_slope=0.05)
+
+        high = self.high_channel_wise(high)
+
         high = self.high_block2(high)
         high = F.leaky_relu(self.high_down2(high), negative_slope=0.05)
 
