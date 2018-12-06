@@ -167,9 +167,9 @@ class _DIN_block(nn.Module):
 
         return output
 
-class attentionBlock(nn.Module):
+class ChannelWiseBlock(nn.Module):
     def __init__(self, in_channel, reduction=64):
-        super(attentionBlock, self).__init__()
+        super(ChannelWiseBlock, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Linear(in_channel, in_channel // reduction),
@@ -186,6 +186,46 @@ class attentionBlock(nn.Module):
         y = y.view(b, c, 1, 1)
         return x * y
 
+class SpatialWiseBlock(nn.Module):
+    def __init__(self, in_channel):
+        super(SpatialWiseBlock, self).__init__()
+        c = in_channel // 16
+        self.conv_in = nn.Conv2d(in_channel, c, kernel_size=1)
+        self.conv_out = nn.Conv2d(c, 1, kernel_size=1)
+
+        #encoder
+        self.conv1 = nn.Conv2d(c, 2 * c, kernel_size=3)
+        self.bn1 = nn.BatchNorm2d(2 * c)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        self.conv2 = nn.Conv2d(2 * c, 4 * c, kernel_size=3)
+        self.bn2 = nn.BatchNorm2d(4 * c)
+
+        #dencoder
+        self.deconv1 = nn.ConvTranspose2d(4 * c, 2 * c, kernel_size=3)
+        self.bn3 = nn.BatchNorm2d(2 * c)
+        self.unpool1 = nn.MaxUnpool2d(kernel_size=2)
+        self.deconv2 = nn.ConvTranspose2d(2* c, c, kernel_size=3)
+        self.bn4 = nn.BatchNorm2d(c)
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.conv_in(x)
+        y = self.conv1(y)
+        y = F.relu(self.bn1(y), inplace=True)
+        size = y.size()
+        y, indices = self.pool1(y)
+        y = self.conv2(y)
+        y = F.relu(self.bn2(y), inplace=True)
+
+        y = self.deconv1(y)
+        y = F.relu(self.bn3(y), inplace=True)
+        y = self.unpool1(y, indices, size)
+        y = self.deconv2(y)
+        y = F.relu(self.bn4(y), inplace=True)
+
+        y = self.conv_out(y)
+        return x * y
+
 class DINetwok(nn.Module):
     def __init__(self):
         super(DINetwok, self).__init__()
@@ -197,10 +237,13 @@ class DINetwok(nn.Module):
         self.low_block1 = nn.Sequential(_DIN_block())
         self.low_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
-        self.low_channel_wise = attentionBlock(64, 16)
+        self.low_channel_wise = ChannelWiseBlock(64, 16)
+        # self.low_spatial_wise = SpatialWiseBlock(64)
 
         self.low_block2 = nn.Sequential(_DIN_block())
         self.low_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+
+        self.low_channel_wise2 = ChannelWiseBlock(16, 4)
 
         # high part
         self.high_conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1)
@@ -209,10 +252,13 @@ class DINetwok(nn.Module):
         self.high_block1 = nn.Sequential(_DIN_block())
         self.high_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
-        self.high_channel_wise = attentionBlock(64, 16)
+        self.high_channel_wise = ChannelWiseBlock(64, 16)
+        # self.high_spatial_wise = SpatialWiseBlock(64)
 
         self.high_block2 = nn.Sequential(_DIN_block())
         self.high_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+
+        self.high_channel_wise2 = ChannelWiseBlock(16, 4)
 
         # conv-lstm
         self.conv_i = nn.Sequential(
@@ -258,9 +304,12 @@ class DINetwok(nn.Module):
         low = F.leaky_relu(self.low_down1(low), negative_slope=0.05)
 
         low = self.low_channel_wise(low)
+        # low = self.low_spatial_wise(low)
 
         low = self.low_block2(low)
         low = F.leaky_relu(self.low_down2(low), negative_slope=0.05)
+
+        low = self.low_channel_wise2(low)
 
         high = F.leaky_relu(self.high_conv1(high), negative_slope=0.05)
         high = F.leaky_relu(self.high_conv2(high), negative_slope=0.05)
@@ -268,9 +317,12 @@ class DINetwok(nn.Module):
         high = F.leaky_relu(self.high_down1(high), negative_slope=0.05)
 
         high = self.high_channel_wise(high)
+        # high = self.high_spatial_wise(high)
 
         high = self.high_block2(high)
         high = F.leaky_relu(self.high_down2(high), negative_slope=0.05)
+
+        high = self.high_channel_wise2(high)
 
         lstm_input = torch.cat([low, high], 1)
 
