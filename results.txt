@@ -1,0 +1,4 @@
+model/checkpoint_2018-12-05 18:10:34/model_epoch_100.pth
+baseNet + channel-wise attention
+psnr: 41.158788453759485
+ssim: 0.9859699469999033
