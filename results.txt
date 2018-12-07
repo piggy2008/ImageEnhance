@@ -2,3 +2,15 @@ model/checkpoint_2018-12-05 18:10:34/model_epoch_100.pth
 baseNet + channel-wise attention
 psnr: 41.158788453759485
 ssim: 0.9859699469999033
+
+model/checkpoint_2018-12-07 16:28:38/model_epoch_100.pth
+loss = a * L1 loss +  b * L2 loss
+a = 1,b = 1
+psnr: 40.925244785628195
+ssim: 0.9853483077483629
+
+/home/lwt/code/ImageEnhance/model/checkpoint_2018-12-07 17:38:41
+loss = a * L1 loss +  b * L2 loss
+a = 1,b = 2
+psnr: 41.13621060926745
+ssim: 0.9858766701873384
