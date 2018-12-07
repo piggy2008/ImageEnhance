@@ -260,6 +260,8 @@ class DINetwok(nn.Module):
 
         self.high_channel_wise2 = ChannelWiseBlock(16, 4)
 
+        self.fuse = nn.Conv2d(in_channels=32, out_channels=1, kernel_size=1, stride=1)
+
         # conv-lstm
         self.conv_i = nn.Sequential(
             nn.Conv2d(in_channels=32 + 32, out_channels=32, kernel_size=3, stride=1, padding=1),
@@ -326,10 +328,12 @@ class DINetwok(nn.Module):
 
         lstm_input = torch.cat([low, high], 1)
 
+        fuse = self.fuse(lstm_input)
+
         h = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         c = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         lstm_seq = []
-        for i in range(4):
+        for i in range(10):
             z = torch.cat([lstm_input, h], 1)
             i = self.conv_i(z)
             f = self.conv_f(z)
@@ -340,7 +344,9 @@ class DINetwok(nn.Module):
             output_lstm = self.conv_lstm_output(h)
             lstm_seq.append(output_lstm)
 
-        return lstm_seq[len(lstm_seq) - 1]
+        final = fuse + lstm_seq[len(lstm_seq) - 1]
+
+        return final, lstm_seq[len(lstm_seq) - 1]
 
 if __name__ == '__main__':
     device = torch.device('cuda')

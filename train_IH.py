@@ -49,16 +49,16 @@ def train(epochs):
 
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
-                                 transforms.RandomCrop(220),
+                                 transforms.RandomCrop(210),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
                                  transforms.ToTensor()]))
 
     training_data_loader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=12,
+                                             batch_size=10,
                                              shuffle=True,
-                                             num_workers=int(1))
+                                             num_workers=int(2))
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
     for epoch in range(1, epochs + 1):
@@ -67,7 +67,12 @@ def train(epochs):
             high = high.type(torch.cuda.FloatTensor)
             target = target.type(torch.cuda.FloatTensor)
 
-            loss = crit(model(low, high), target)
+            final, lstm_branck = model(low, high)
+
+            loss = crit(final, target)
+            loss_lstm = crit(lstm_branck, target)
+
+            loss = 0.8 * loss + 0.2 * loss_lstm
 
             optimizer.zero_grad()
 
@@ -98,6 +103,6 @@ def save_checkpoint(model, epoch, time):
     print("Checkpoint saved to {}".format(model_out_path))
 
 if __name__ == '__main__':
-    total_epochs = 100
+    total_epochs = 200
     # data_path = '/home/ty/code/pytorch-edsr/data/edsr_x4.h5'
     train(total_epochs)
