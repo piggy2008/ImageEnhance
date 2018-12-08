@@ -2,3 +2,14 @@ model/checkpoint_2018-12-05 18:10:34/model_epoch_100.pth
 baseNet + channel-wise attention
 psnr: 41.158788453759485
 ssim: 0.9859699469999033
+
+model/checkpoint_2018-12-06 17:25:06/model_epoch_100.pth
+baseNet + channel-wise attention * 2
+psnr: 41.174190736364764
+ssim: 0.9860090147018893
+
+model/checkpoint_2018-12-06 22:26:13/model_epoch_200.pth
+baseNet + channel-wise attention * 4 + lstm timestep(8)
+psnr: 41.55534009046717
+ssim: 0.9865135122951356
+
