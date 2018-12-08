@@ -303,28 +303,11 @@ class DINetwok(nn.Module):
     def forward(self, low, high):
         low = F.leaky_relu(self.low_conv1(low), negative_slope=0.05)
         low = F.leaky_relu(self.low_conv2(low), negative_slope=0.05)
-<<<<<<< HEAD
-
-        #add bn
-=======
-        #add batch normalization
->>>>>>> origin/master
-        norm = nn.BatchNorm2d(64).cuda()
-        low = norm(low)
-
         low = self.low_block1(low)
         low = F.leaky_relu(self.low_down1(low), negative_slope=0.05)
 
         low = self.low_channel_wise(low)
         # low = self.low_spatial_wise(low)
-
-<<<<<<< HEAD
-        # add bn
-        norm = nn.BatchNorm2d(64).cuda()
-=======
-        # add batch normalization
->>>>>>> origin/master
-        low = norm(low)
 
         low = self.low_block2(low)
         low = F.leaky_relu(self.low_down2(low), negative_slope=0.05)
