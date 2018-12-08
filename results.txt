@@ -24,3 +24,8 @@ loss = a * L1 loss +  b * L2 loss
 a = 1,b = 2
 psnr: 41.13621060926745
 ssim: 0.9858766701873384
+
+model/checkpoint_2018-12-08 16:20:32/model_epoch_200.pth
+loss = 0.5 * loss + 0.5 * loss_lstm
+psnr: 41.50352544364937
+ssim: 0.9864186467170766

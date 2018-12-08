@@ -37,12 +37,7 @@ def train(epochs):
     list_file = open(train_file)
     image_names = [line.strip() for line in list_file]
 
-    global a
-    global b
-    a = 0
-    b = 1
     crit = nn.L1Loss()
-    crit2 = nn.MSELoss()
 
     # model = SRNet().to(device)
     model = DINetwok().to(device)
@@ -57,14 +52,14 @@ def train(epochs):
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
 
-                                 transforms.RandomCrop(210),
+                                 transforms.RandomCrop(100),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
                                  transforms.ToTensor()]))
 
     training_data_loader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=10,
+                                             batch_size=8,
                                              shuffle=True,
                                              num_workers=int(2))
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -80,7 +75,7 @@ def train(epochs):
             loss = crit(final, target)
             loss_lstm = crit(lstm_branck, target)
 
-            loss = 0.8 * loss + 0.2 * loss_lstm
+            loss = 0.5 * loss + 0.5 * loss_lstm
 
 
             optimizer.zero_grad()
