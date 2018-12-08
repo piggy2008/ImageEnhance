@@ -20,6 +20,7 @@ def adjust_learning_rate(optimizer, epoch, param):
     for param_group in optimizer.param_groups:
         param_group['lr'] = param['running_lr']
 
+
 def train(epochs):
     device = torch.device('cuda')
     param = {}
@@ -36,7 +37,13 @@ def train(epochs):
     list_file = open(train_file)
     image_names = [line.strip() for line in list_file]
 
+    global a
+    global b
+    a = 0
+    b = 1
     crit = nn.L1Loss()
+    crit2 = nn.MSELoss()
+
     # model = SRNet().to(device)
     model = DINetwok().to(device)
     # model.load_state_dict(torch.load('model/2018-10-26 22:11:34/50000/snap_model.pth'))
@@ -50,10 +57,14 @@ def train(epochs):
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
 <<<<<<< HEAD
+<<<<<<< HEAD
                                  transforms.RandomCrop(180),
 =======
                                  transforms.RandomCrop(210),
 >>>>>>> upstream/master
+=======
+                                 transforms.RandomCrop(120),
+>>>>>>> origin/master
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
@@ -71,12 +82,16 @@ def train(epochs):
             high = high.type(torch.cuda.FloatTensor)
             target = target.type(torch.cuda.FloatTensor)
 
+<<<<<<< HEAD
             final, lstm_branck = model(low, high)
 
             loss = crit(final, target)
             loss_lstm = crit(lstm_branck, target)
 
             loss = 0.8 * loss + 0.2 * loss_lstm
+=======
+            loss = a * crit(model(low, high), target) + b * crit2(model(low, high), target)
+>>>>>>> origin/master
 
             optimizer.zero_grad()
 
