@@ -38,6 +38,7 @@ def train(epochs):
     image_names = [line.strip() for line in list_file]
 
     crit = nn.L1Loss()
+    #crit = nn.BCELoss()
 
     # model = SRNet().to(device)
     model = DINetwok().to(device)
@@ -52,14 +53,14 @@ def train(epochs):
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
 
-                                 transforms.RandomCrop(100),
+                                 transforms.RandomCrop(180),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
                                  transforms.ToTensor()]))
 
     training_data_loader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=8,
+                                             batch_size=10,
                                              shuffle=True,
                                              num_workers=int(2))
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -73,9 +74,9 @@ def train(epochs):
             final, lstm_branck = model(low, high)
 
             loss = crit(final, target)
-            loss_lstm = crit(lstm_branck, target)
+            #loss_lstm = crit(lstm_branck, target)
 
-            loss = 0.5 * loss + 0.5 * loss_lstm
+            #loss = 0.9 * loss + 0.1 * loss_lstm
 
 
             optimizer.zero_grad()
@@ -107,6 +108,6 @@ def save_checkpoint(model, epoch, time):
     print("Checkpoint saved to {}".format(model_out_path))
 
 if __name__ == '__main__':
-    total_epochs = 200
+    total_epochs = 300
     # data_path = '/home/ty/code/pytorch-edsr/data/edsr_x4.h5'
     train(total_epochs)

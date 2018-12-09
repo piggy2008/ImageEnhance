@@ -29,3 +29,8 @@ model/checkpoint_2018-12-08 16:20:32/model_epoch_200.pth
 loss = 0.5 * loss + 0.5 * loss_lstm
 psnr: 41.50352544364937
 ssim: 0.9864186467170766
+
+model/checkpoint_2018-12-09 00:32:04/model_epoch_300.pth
+loss = L1 loss
+psnr: 41.599511379276905
+ssim: 0.9865844204148276

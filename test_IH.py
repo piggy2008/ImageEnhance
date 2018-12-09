@@ -50,7 +50,7 @@ def test():
 
     # model = SRNet().to(device)
     model = DINetwok().to(device)
-    model.load_state_dict(torch.load('model/checkpoint_2018-12-08 16:20:32/model_epoch_200.pth'))
+    model.load_state_dict(torch.load(''))
     model.eval()
     # model = load_part_of_model(model, 'checkpoint/model_epoch_5.pth')
     size = 200
