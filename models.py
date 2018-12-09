@@ -349,8 +349,8 @@ class DINetwok(nn.Module):
 
         final = fuse + lstm_seq[len(lstm_seq) - 1]
 
-        return final, lstm_seq[len(lstm_seq) - 1]
-        #return final
+        #return final, lstm_seq[len(lstm_seq) - 1]
+        return final
 
 if __name__ == '__main__':
     device = torch.device('cuda')

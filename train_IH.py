@@ -53,14 +53,14 @@ def train(epochs):
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
 
-                                 transforms.RandomCrop(180),
+                                 transforms.RandomCrop(170),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
                                  transforms.ToTensor()]))
 
     training_data_loader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=10,
+                                             batch_size=12,
                                              shuffle=True,
                                              num_workers=int(2))
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())

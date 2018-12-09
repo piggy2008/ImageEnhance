@@ -34,3 +34,8 @@ model/checkpoint_2018-12-09 00:32:04/model_epoch_300.pth
 loss = L1 loss
 psnr: 41.599511379276905
 ssim: 0.9865844204148276
+
+model/checkpoint_2018-12-09 13:09:13/model_epoch_300.pth
+transforms.RandomCrop(170)+batch_size=12
+psnr: 41.61049459308909
+ssim: 0.9866014187194884
