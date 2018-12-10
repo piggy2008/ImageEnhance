@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models import SRNet, DINetwok
+from models import SRNet, DINetwok,LRIMNet
 import os
 import time
 from H5FileDataLoader import DatasetFromHdf5
@@ -20,6 +20,7 @@ def adjust_learning_rate(optimizer, epoch, param):
     for param_group in optimizer.param_groups:
         param_group['lr'] = param['running_lr']
 
+
 def train(epochs):
     device = torch.device('cuda')
     param = {}
@@ -37,6 +38,8 @@ def train(epochs):
     image_names = [line.strip() for line in list_file]
 
     crit = nn.L1Loss()
+    #crit = nn.BCELoss()
+
     # model = SRNet().to(device)
     model = DINetwok().to(device)
     # model.load_state_dict(torch.load('model/2018-10-26 22:11:34/50000/snap_model.pth'))
@@ -49,7 +52,7 @@ def train(epochs):
 
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
-                                 transforms.RandomCrop(200),
+                                 transforms.RandomCrop(120),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
@@ -70,9 +73,6 @@ def train(epochs):
             final = model(low, high)
 
             loss = crit(final, target)
-            # loss_lstm = crit(lstm_branck, target)
-
-            # loss = 0.8 * loss + 0.2 * loss_lstm
 
             optimizer.zero_grad()
 
@@ -103,6 +103,6 @@ def save_checkpoint(model, epoch, time):
     print("Checkpoint saved to {}".format(model_out_path))
 
 if __name__ == '__main__':
-    total_epochs = 300
+    total_epochs = 400
     # data_path = '/home/ty/code/pytorch-edsr/data/edsr_x4.h5'
     train(total_epochs)

@@ -257,6 +257,14 @@ class DINetwok(nn.Module):
         self.low_down2 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
         self.low_channel_wise2 = ChannelWiseBlock(64, 16)
+<<<<<<< HEAD
+        self.low_scale2 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1)
+
+        self.low_block3 = nn.Sequential(_DIN_block(drop_out=True))
+        self.low_down3 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+
+        self.low_channel_wise3 = ChannelWiseBlock(16, 4)
+=======
 
         self.low_block3 = nn.Sequential(_DIN_block())
         self.low_down3 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
@@ -268,6 +276,7 @@ class DINetwok(nn.Module):
         self.low_down4 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
 
         self.low_channel_wise4 = ChannelWiseBlock(16, 4)
+>>>>>>> 86f8989635ecf589778d4071bd3532b3a54de65e
 
         # high part
         self.high_conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1)
@@ -284,6 +293,12 @@ class DINetwok(nn.Module):
         self.high_down2 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
         self.high_channel_wise2 = ChannelWiseBlock(64, 16)
+<<<<<<< HEAD
+        self.high_scale2 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1)
+
+        self.high_block3 = nn.Sequential(_DIN_block(drop_out=True))
+        self.high_down3 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+=======
 
         self.high_block3 = nn.Sequential(_DIN_block())
         self.high_down3 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
@@ -295,6 +310,9 @@ class DINetwok(nn.Module):
         self.high_down4 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
 
         self.high_channel_wise4 = ChannelWiseBlock(16, 4)
+>>>>>>> 86f8989635ecf589778d4071bd3532b3a54de65e
+
+        self.high_channel_wise3 = ChannelWiseBlock(16, 4)
 
         # self.fuse = nn.Conv2d(in_channels=32, out_channels=1, kernel_size=1, stride=1)
 
@@ -398,6 +416,13 @@ class DINetwok(nn.Module):
 
         lstm_input = torch.cat([low, high], 1)
 
+<<<<<<< HEAD
+        # fuse = self.fuse(lstm_input)
+=======
+        #print(lstm_input.shape)
+        fuse = self.fuse(lstm_input)
+>>>>>>> 86f8989635ecf589778d4071bd3532b3a54de65e
+
         h = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         c = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         lstm_seq = []
@@ -414,8 +439,11 @@ class DINetwok(nn.Module):
 
         final = lstm_seq[len(lstm_seq) - 1] + low_scale2 + high_scale2
 
+<<<<<<< HEAD
         return final
-
+=======
+        #return final, lstm_seq[len(lstm_seq) - 1]
+        return final
 class LRIMNet(nn.Module):
     def __init__(self):
         super(LRIMNet, self).__init__()
@@ -510,6 +538,7 @@ class LRIMNet(nn.Module):
 
         return final, lstm_seq[len(lstm_seq) - 1]
         #return final
+>>>>>>> 86f8989635ecf589778d4071bd3532b3a54de65e
 
 if __name__ == '__main__':
     device = torch.device('cuda')
