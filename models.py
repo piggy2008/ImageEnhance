@@ -128,12 +128,16 @@ class SRNet(nn.Module):
         return lstm_seq[len(lstm_seq) - 1]
 
 class _DIN_block(nn.Module):
-    def __init__(self):
+    def __init__(self, drop_out=False):
         super(_DIN_block, self).__init__()
+
+        self.drop_out = drop_out
 
         self.conv1_1 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1)
         self.conv1_2 = nn.Conv2d(in_channels=48, out_channels=32, kernel_size=3, stride=1, padding=1, groups=4)
         self.conv1_3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+
+        self.channel_wise = ChannelWiseBlock(64, 16)
 
         self.conv2_1 = nn.Conv2d(in_channels=48, out_channels=64, kernel_size=3, stride=1, padding=1)
         self.conv2_2 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1, groups=4)
@@ -156,12 +160,20 @@ class _DIN_block(nn.Module):
         x = F.leaky_relu(self.conv1_1(x), negative_slope=0.05)
         x = F.leaky_relu(self.conv1_2(x), negative_slope=0.05)
         x = F.leaky_relu(self.conv1_3(x), negative_slope=0.05)
+
+        if self.drop_out:
+            x = F.dropout(x, p=0.25)
+
+        x = self.channel_wise(x)
         slice1 = x.narrow(1, 0, 16)
         slice2 = x.narrow(1, 16, 48)
 
         x = F.leaky_relu(self.conv2_1(slice2), negative_slope=0.05)
         x = F.leaky_relu(self.conv2_2(x), negative_slope=0.05)
         x = F.leaky_relu(self.conv2_3(x), negative_slope=0.05)
+
+        if self.drop_out:
+            x = F.dropout(x, p=0.25)
 
         output = torch.add(torch.cat([identity_data, slice1], dim=1), x)
 
@@ -238,12 +250,18 @@ class DINetwok(nn.Module):
         self.low_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
         self.low_channel_wise = ChannelWiseBlock(64, 16)
-        # self.low_spatial_wise = SpatialWiseBlock(64)
+        # self.low_scale1 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1)
 
         self.low_block2 = nn.Sequential(_DIN_block())
-        self.low_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+        self.low_down2 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
-        self.low_channel_wise2 = ChannelWiseBlock(16, 4)
+        self.low_channel_wise2 = ChannelWiseBlock(64, 16)
+        self.low_scale2 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1)
+
+        self.low_block3 = nn.Sequential(_DIN_block(drop_out=True))
+        self.low_down3 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+
+        self.low_channel_wise3 = ChannelWiseBlock(16, 4)
 
         # high part
         self.high_conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1)
@@ -253,14 +271,20 @@ class DINetwok(nn.Module):
         self.high_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
         self.high_channel_wise = ChannelWiseBlock(64, 16)
-        # self.high_spatial_wise = SpatialWiseBlock(64)
+        # self.high_scale1 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1)
 
         self.high_block2 = nn.Sequential(_DIN_block())
-        self.high_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+        self.high_down2 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
-        self.high_channel_wise2 = ChannelWiseBlock(16, 4)
+        self.high_channel_wise2 = ChannelWiseBlock(64, 16)
+        self.high_scale2 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1)
 
-        self.fuse = nn.Conv2d(in_channels=32, out_channels=1, kernel_size=1, stride=1)
+        self.high_block3 = nn.Sequential(_DIN_block(drop_out=True))
+        self.high_down3 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
+
+        self.high_channel_wise3 = ChannelWiseBlock(16, 4)
+
+        # self.fuse = nn.Conv2d(in_channels=32, out_channels=1, kernel_size=1, stride=1)
 
         # conv-lstm
         self.conv_i = nn.Sequential(
@@ -306,12 +330,19 @@ class DINetwok(nn.Module):
         low = F.leaky_relu(self.low_down1(low), negative_slope=0.05)
 
         low = self.low_channel_wise(low)
+        # low_scale1 = self.low_scale1(low)
         # low = self.low_spatial_wise(low)
 
         low = self.low_block2(low)
         low = F.leaky_relu(self.low_down2(low), negative_slope=0.05)
 
         low = self.low_channel_wise2(low)
+        low_scale2 = self.low_scale2(low)
+
+        low = self.low_block3(low)
+        low = F.leaky_relu(self.low_down3(low), negative_slope=0.05)
+
+        low = self.low_channel_wise3(low)
 
         high = F.leaky_relu(self.high_conv1(high), negative_slope=0.05)
         high = F.leaky_relu(self.high_conv2(high), negative_slope=0.05)
@@ -319,21 +350,28 @@ class DINetwok(nn.Module):
         high = F.leaky_relu(self.high_down1(high), negative_slope=0.05)
 
         high = self.high_channel_wise(high)
+        # high_scale1 = self.high_scale1(high)
         # high = self.high_spatial_wise(high)
 
         high = self.high_block2(high)
         high = F.leaky_relu(self.high_down2(high), negative_slope=0.05)
 
         high = self.high_channel_wise2(high)
+        high_scale2 = self.high_scale2(high)
+
+        high = self.high_block3(high)
+        high = F.leaky_relu(self.high_down3(high), negative_slope=0.05)
+
+        high = self.high_channel_wise3(high)
 
         lstm_input = torch.cat([low, high], 1)
 
-        fuse = self.fuse(lstm_input)
+        # fuse = self.fuse(lstm_input)
 
         h = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         c = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         lstm_seq = []
-        for i in range(10):
+        for i in range(6):
             z = torch.cat([lstm_input, h], 1)
             i = self.conv_i(z)
             f = self.conv_f(z)
@@ -344,9 +382,9 @@ class DINetwok(nn.Module):
             output_lstm = self.conv_lstm_output(h)
             lstm_seq.append(output_lstm)
 
-        final = fuse + lstm_seq[len(lstm_seq) - 1]
+        final = lstm_seq[len(lstm_seq) - 1] + low_scale2 + high_scale2
 
-        return final, lstm_seq[len(lstm_seq) - 1]
+        return final
 
 if __name__ == '__main__':
     device = torch.device('cuda')
