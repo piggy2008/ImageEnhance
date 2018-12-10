@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models import SRNet, DINetwok
+from models import SRNet, DINetwok,LRIMNet
 import os
 import time
 from H5FileDataLoader import DatasetFromHdf5
@@ -53,14 +53,14 @@ def train(epochs):
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
 
-                                 transforms.RandomCrop(170),
+                                 transforms.RandomCrop(120),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
                                  transforms.ToTensor()]))
 
     training_data_loader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=12,
+                                             batch_size=16,
                                              shuffle=True,
                                              num_workers=int(2))
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -91,7 +91,7 @@ def train(epochs):
 
         print("Epochs={}, lr={}".format(epoch, optimizer.param_groups[0]["lr"]))
 
-        if epoch % 20 == 0:
+        if epoch % 50 == 0:
             save_checkpoint(model, epoch, time_str)
 
 
@@ -108,6 +108,6 @@ def save_checkpoint(model, epoch, time):
     print("Checkpoint saved to {}".format(model_out_path))
 
 if __name__ == '__main__':
-    total_epochs = 300
+    total_epochs = 400
     # data_path = '/home/ty/code/pytorch-edsr/data/edsr_x4.h5'
     train(total_epochs)

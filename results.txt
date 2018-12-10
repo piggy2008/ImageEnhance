@@ -39,3 +39,8 @@ model/checkpoint_2018-12-09 13:09:13/model_epoch_300.pth
 transforms.RandomCrop(170)+batch_size=12
 psnr: 41.61049459308909
 ssim: 0.9866014187194884
+
+model/checkpoint_2018-12-09 22:45:00/model_epoch_400.pth
+low:4 blocks high 4 blocks
+psnr: 41.77082187548866
+ssim: 0.9867898069327425
