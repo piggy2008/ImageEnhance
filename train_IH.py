@@ -9,6 +9,10 @@ from EnhanceDataLoader import EnhanceDataset
 import transforms
 from utils import load_part_of_model
 
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 def adjust_learning_rate(optimizer, epoch, param):
     """Sets the learning rate to the initial LR decayed by 10"""
     if param['max_epoch'] >= epoch:
@@ -49,14 +53,14 @@ def train(epochs):
 
     dataset = EnhanceDataset(left_high_root, right_low_root, gt_root, image_names,
                              transform=transforms.Compose([
-                                 transforms.RandomCrop(210),
+                                 transforms.RandomCrop(150),
                                  transforms.RandomHorizontalFlip(),
                                  transforms.RandomVerticalFlip(),
                                  transforms.RandomRotation(),
                                  transforms.ToTensor()]))
 
     training_data_loader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=10,
+                                             batch_size=12,
                                              shuffle=True,
                                              num_workers=int(2))
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -81,7 +85,7 @@ def train(epochs):
             optimizer.step()
 
             if iteration % 2 == 0:
-                print("===> Epoch[{}]({}/{}): Loss: {:.10f}; lr:{:.10f}".format(epoch, iteration, len(training_data_loader), loss.data[0], param['running_lr']))
+                print("===> Epoch[{}]({}/{}): Loss: {:.10f}; lr:{:.10f}".format(epoch, iteration, len(training_data_loader), loss.item(), param['running_lr']))
             adjust_learning_rate(optimizer, epoch, param)
 
         print("Epochs={}, lr={}".format(epoch, optimizer.param_groups[0]["lr"]))
