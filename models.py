@@ -342,14 +342,11 @@ class DINetwok(nn.Module):
         low = F.leaky_relu(self.low_down1(low), negative_slope=0.05)
 
         low = self.low_channel_wise(low)
-        # low_scale1 = self.low_scale1(low)
-        # low = self.low_spatial_wise(low)
 
         low = self.low_block2(low)
         low = F.leaky_relu(self.low_down2(low), negative_slope=0.05)
 
         low = self.low_channel_wise2(low)
-        low_scale2 = self.low_scale2(low)
 
         low = self.low_block3(low)
         low = F.leaky_relu(self.low_down3(low), negative_slope=0.05)
@@ -379,7 +376,6 @@ class DINetwok(nn.Module):
         high = F.leaky_relu(self.high_down2(high), negative_slope=0.05)
 
         high = self.high_channel_wise2(high)
-        high_scale2 = self.high_scale2(high)
 
         high = self.high_block3(high)
         high = F.leaky_relu(self.high_down3(high), negative_slope=0.05)
@@ -412,7 +408,7 @@ class DINetwok(nn.Module):
             output_lstm = self.conv_lstm_output(h)
             lstm_seq.append(output_lstm)
 
-        final = lstm_seq[len(lstm_seq) - 1] + low_scale2 + high_scale2
+        final = lstm_seq[len(lstm_seq) - 1]
 
         return final
 
