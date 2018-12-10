@@ -311,13 +311,13 @@ class DINetwok(nn.Module):
         self.high_conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1)
         self.high_conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
 
-        self.high_block1 = nn.Sequential(_DIN_block2())
+        self.high_block1 = nn.Sequential(_DIN_block1())
         self.high_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
 
         self.high_channel_wise = ChannelWiseBlock(64, 16)
         # self.high_spatial_wise = SpatialWiseBlock(64)
 
-        self.high_block2 = nn.Sequential(_DIN_block2())
+        self.high_block2 = nn.Sequential(_DIN_block1())
         self.high_down2 = nn.Conv2d(in_channels=80, out_channels=16, kernel_size=1, stride=1)
 
         self.high_channel_wise2 = ChannelWiseBlock(16, 4)
