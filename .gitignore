@@ -1,3 +1,11 @@
 __pycache__/
 model/
+checkpoint
+checkpoint_clone
+Dataset05/.DS_Store
+pre_model/
+testing_code/
+training_code/
+
+
 
