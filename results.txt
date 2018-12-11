@@ -19,6 +19,11 @@ psnr: 41.209245919984326
 ssim: 0.9858588638503996
 
 model/checkpoint_2018-12-10 17:21:38/model_epoch_300.pth
-baseNet + channel-wise attention * 4 + lstm timestep(8) + add two group conv in Dinblock of  low
+baseNet + channel-wise attention * 4 + lstm timestep(8) + aINblock2 in low, DINblock1 in high
 psnr: 41.74088483279791
 ssim: 0.9868060839570093
+
+model/checkpoint_2018-12-10 22:58:21/model_epoch_800.pth
+baseNet + channel-wise attention * 4 + lstm timestep(8) + aINblock2 in low, DINblock1 in high + add channel-wise attention *2 in DINblock1
+psnr: 41.81571898282003
+ssim: 0.9868449232346679

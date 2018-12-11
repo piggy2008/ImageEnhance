@@ -196,10 +196,12 @@ class _DIN_block1(nn.Module):
         self.conv1_1 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1)
         self.conv1_2 = nn.Conv2d(in_channels=48, out_channels=32, kernel_size=3, stride=1, padding=1, groups=4)
         self.conv1_3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.con1 = ChannelWiseBlock(64, 16)
 
         self.conv2_1 = nn.Conv2d(in_channels=48, out_channels=64, kernel_size=3, stride=1, padding=1)
         self.conv2_2 = nn.Conv2d(in_channels=64, out_channels=48, kernel_size=3, stride=1, padding=1, groups=4)
         self.conv2_3 = nn.Conv2d(in_channels=48, out_channels=80, kernel_size=3, stride=1, padding=1)
+        self.con2 = ChannelWiseBlock(80, 20)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -218,12 +220,14 @@ class _DIN_block1(nn.Module):
         x = F.leaky_relu(self.conv1_1(x), negative_slope=0.05)
         x = F.leaky_relu(self.conv1_2(x), negative_slope=0.05)
         x = F.leaky_relu(self.conv1_3(x), negative_slope=0.05)
+        x = self.con1(x)
         slice1 = x.narrow(1, 0, 16)
         slice2 = x.narrow(1, 16, 48)
 
         x = F.leaky_relu(self.conv2_1(slice2), negative_slope=0.05)
         x = F.leaky_relu(self.conv2_2(x), negative_slope=0.05)
         x = F.leaky_relu(self.conv2_3(x), negative_slope=0.05)
+        x = self.con2(x)
 
         output = torch.add(torch.cat([identity_data, slice1], dim=1), x)
 
