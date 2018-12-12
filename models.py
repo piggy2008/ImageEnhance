@@ -3,6 +3,7 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 import numpy as np
+from lib_nonlocal.non_local_embedded_gaussian import NONLocalBlock2D
 
 class MeanShift(nn.Conv2d):
     def __init__(self, rgb_mean, sign):
@@ -248,19 +249,19 @@ class DINetwok(nn.Module):
 
         self.low_block1 = nn.Sequential(_DIN_block())
         self.low_down1 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
-
+        self.low_non_local1 = NONLocalBlock2D(in_channels=64)
         self.low_channel_wise = ChannelWiseBlock(64, 16)
         # self.low_scale1 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1)
 
 
         self.low_block2 = nn.Sequential(_DIN_block())
         self.low_down2 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
-
+        self.low_non_local2 = NONLocalBlock2D(in_channels=64)
         self.low_channel_wise2 = ChannelWiseBlock(64, 16)
 
         self.low_block3 = nn.Sequential(_DIN_block())
         self.low_down3 = nn.Conv2d(in_channels=80, out_channels=64, kernel_size=1, stride=1)
-
+        self.low_non_local3 = NONLocalBlock2D(in_channels=64)
         self.low_channel_wise3 = ChannelWiseBlock(64, 16)
 
 
@@ -338,24 +339,20 @@ class DINetwok(nn.Module):
     def forward(self, low, high):
         low = F.leaky_relu(self.low_conv1(low), negative_slope=0.05)
         low = F.leaky_relu(self.low_conv2(low), negative_slope=0.05)
+
         low = self.low_block1(low)
         low = F.leaky_relu(self.low_down1(low), negative_slope=0.05)
-
+        low = self.low_non_local1(low)
         low = self.low_channel_wise(low)
 
         low = self.low_block2(low)
         low = F.leaky_relu(self.low_down2(low), negative_slope=0.05)
-
+        low = self.low_non_local2(low)
         low = self.low_channel_wise2(low)
 
         low = self.low_block3(low)
         low = F.leaky_relu(self.low_down3(low), negative_slope=0.05)
-
-        low = self.low_channel_wise3(low)
-
-        low = self.low_block3(low)
-        low = F.leaky_relu(self.low_down3(low), negative_slope=0.05)
-
+        low = self.low_non_local3(low)
         low = self.low_channel_wise3(low)
 
         low = self.low_block4(low)
@@ -382,11 +379,6 @@ class DINetwok(nn.Module):
 
         high = self.high_channel_wise3(high)
 
-        high = self.high_block3(high)
-        high = F.leaky_relu(self.high_down3(high), negative_slope=0.05)
-
-        high = self.high_channel_wise3(high)
-
         high = self.high_block4(high)
         high = F.leaky_relu(self.high_down4(high), negative_slope=0.05)
 
@@ -397,7 +389,7 @@ class DINetwok(nn.Module):
         h = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         c = torch.zeros(low.size(0), 32, low.size(2), low.size(3)).type(torch.cuda.FloatTensor)
         lstm_seq = []
-        for i in range(6):
+        for i in range(10):
             z = torch.cat([lstm_input, h], 1)
             i = self.conv_i(z)
             f = self.conv_f(z)

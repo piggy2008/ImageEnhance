@@ -34,7 +34,7 @@ def toTensor(picA, picB, picC):
             # put it from HWC to CHW format
             # yikes, this transpose takes 80% of the loading time/CPU
             img = img.transpose(0, 1).transpose(0, 2).contiguous()
-            img = img.float().div(255.)
+            img = img.float().sub(0.48102492).div(255.)
         output.append(img)
     return output[0], output[1], output[2]
 
@@ -51,13 +51,14 @@ def test():
     # model = SRNet().to(device)
     model = DINetwok().to(device)
 
-    model.load_state_dict(torch.load('model/checkpoint_2018-12-09 22:45:00/model_epoch_400.pth'))
+    model.load_state_dict(torch.load('model/checkpoint_2018-12-11 22:35:17/model_epoch_400.pth'))
 
     model.eval()
     # model = load_part_of_model(model, 'checkpoint/model_epoch_5.pth')
     size = 200
     psnr_total = []
     ssim_total = []
+    pix_total = []
     for name in image_names:
         left_high = Image.open(os.path.join(left_high_root, name + '0.jpg'))
         right_low = Image.open(os.path.join(right_low_root, name + '1.jpg'))
@@ -73,6 +74,7 @@ def test():
         count = 0
         psnr_img = []
         ssim_img = []
+        pix_mean = []
         for i in range(iter_w):
             if i == iter_w - 1:
                 crop_w = w - i * size
@@ -105,6 +107,7 @@ def test():
                 # plt.subplot(1, 3, 3)
                 # plt.imshow(input1[0, 0, :, :])
                 # plt.show()
+                pix_mean.append(np.mean(target))
                 psnr = compare_psnr(target[0, :, :], result[0, 0, :, :])
                 ssim = compare_ssim(result[0, 0, :, :], target[0, :, :])
                 psnr_img.append(psnr)
@@ -112,15 +115,19 @@ def test():
 
         psnr_img_mean = np.mean(psnr_img)
         ssim_img_mean = np.mean(ssim_img)
+        pix_img_mean = np.mean(pix_mean)
 
         psnr_total.append(psnr_img_mean)
         ssim_total.append(ssim_img_mean)
+        pix_total.append(pix_img_mean)
 
     final_psnr = np.mean(psnr_total)
     final_ssim = np.mean(ssim_total)
+    final_pix_mean = np.mean(pix_total)
 
     print('psnr:', final_psnr)
     print('ssim:', final_ssim)
+    print('pixel mean:', final_pix_mean)
 
 
 
