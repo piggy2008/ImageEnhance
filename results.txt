@@ -13,6 +13,28 @@ baseNet + channel-wise attention * 4 + lstm timestep(8)
 psnr: 41.55534009046717
 ssim: 0.9865135122951356
 
+
+model/checkpoint_2018-12-10 11:04:10/model_epoch_200.pth
+baseNet + channel-wise attention * 4 + lstm timestep(8) + add two group conv in Dinblock of  low ,high
+psnr: 41.209245919984326
+ssim: 0.9858588638503996
+
+model/checkpoint_2018-12-10 17:21:38/model_epoch_300.pth
+baseNet + channel-wise attention * 4 + lstm timestep(8) + aINblock2 in low, DINblock1 in high
+psnr: 41.74088483279791
+ssim: 0.9868060839570093
+
+model/checkpoint_2018-12-10 22:58:21/model_epoch_800.pth
+baseNet + channel-wise attention * 4 + lstm timestep(8) + aINblock2 in low, DINblock1 in high + add channel-wise attention *2 in DINblock1
+psnr: 41.81571898282003
+ssim: 0.9868449232346679
+
+model/checkpoint_2018-12-11 15:28:36/model_epoch_600.pth
+baseNet + channel-wise attention * 4 + lstm timestep(8) + aINblock2 in low, DINblock1 in high + add channel-wise attention *2 in DINblock1
++ add channel-wise attention *2 in DINblock2
+psnr: 41.91081327874605
+ssim: 0.986992942990655
+
 model/checkpoint_2018-12-07 16:28:38/model_epoch_100.pth
 loss = a * L1 loss +  b * L2 loss
 a = 1,b = 1
@@ -44,3 +66,4 @@ model/checkpoint_2018-12-09 22:45:00/model_epoch_400.pth
 low:4 blocks high 4 blocks
 psnr: 41.77082187548866
 ssim: 0.9867898069327425
+

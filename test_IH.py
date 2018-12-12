@@ -15,6 +15,10 @@ from matplotlib import pyplot as plt
 import math
 from skimage.measure import compare_psnr, compare_ssim
 
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 def toTensor(picA, picB, picC):
     pics = [picA, picB, picC]
     output = []
@@ -52,6 +56,7 @@ def test():
     model = DINetwok().to(device)
 
     model.load_state_dict(torch.load('model/checkpoint_2018-12-11 22:35:17/model_epoch_400.pth'))
+
 
     model.eval()
     # model = load_part_of_model(model, 'checkpoint/model_epoch_5.pth')
