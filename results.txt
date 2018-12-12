@@ -27,3 +27,9 @@ model/checkpoint_2018-12-10 22:58:21/model_epoch_800.pth
 baseNet + channel-wise attention * 4 + lstm timestep(8) + aINblock2 in low, DINblock1 in high + add channel-wise attention *2 in DINblock1
 psnr: 41.81571898282003
 ssim: 0.9868449232346679
+
+model/checkpoint_2018-12-11 15:28:36/model_epoch_600.pth
+baseNet + channel-wise attention * 4 + lstm timestep(8) + aINblock2 in low, DINblock1 in high + add channel-wise attention *2 in DINblock1
++ add channel-wise attention *2 in DINblock2
+psnr: 41.91081327874605
+ssim: 0.986992942990655
